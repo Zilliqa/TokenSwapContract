@@ -1,0 +1,206 @@
+scilla_version 0
+
+library ZilTokenSwap
+
+let uint128_zero = Uint128 0
+let bool_active = True
+let bool_inactive = False
+
+let one_msg =
+  fun (m : Message) =>
+    let e = Nil {Message} in
+      Cons {Message} m e
+
+type Error =
+| ContractPaused
+| AdminValidationFailed
+| StagingAdminValidationFailed
+| StagingAdminNotExist
+| ContractNotPaused
+
+let make_error =
+  fun (result : Error) =>
+    let result_code = 
+      match result with
+      | ContractPaused              => Int32 -1
+      | AdminValidationFailed       => Int32 -2
+      | StagingAdminValidationFailed => Int32 -3
+      | StagingAdminNotExist        => Int32 -4
+      | ContractNotPaused           => Int32 -5
+      end
+    in
+    { _exception : "Error"; code : result_code }
+
+
+contract ZilTokenSwap(
+  init_admin: ByStr20,
+  init_ziladdr: ByStr20,
+  init_lockproxy: ByStr20
+)
+
+field contractadmin: ByStr20  = init_admin
+field ziladdr: ByStr20 = init_ziladdr
+field lockproxy: ByStr20 = init_lockproxy
+field stagingcontractadmin: Option ByStr20 = None {ByStr20}
+field paused: Bool = True
+
+(**************************************)
+(*             Procedures             *)
+(**************************************)
+
+procedure ThrowError(err : Error)
+  e = make_error err;
+  throw e
+end
+
+procedure IsAdmin(initiator: ByStr20)
+  contractadmin_tmp <- contractadmin;
+  is_admin = builtin eq initiator contractadmin_tmp;
+  match is_admin with
+  | True  =>
+  | False =>
+    e = AdminValidationFailed;
+    ThrowError e
+  end
+end
+
+procedure IsNotPaused()
+  paused_tmp <- paused;
+  match paused_tmp with
+  | False =>
+  | True  =>
+    e = ContractPaused;
+    ThrowError e
+  end
+end
+
+procedure IsPaused()
+  paused_tmp <- paused;
+  match paused_tmp with
+  | False =>
+    e = ContractNotPaused;
+    ThrowError e
+  | True  =>
+  end
+end
+
+procedure transferZRC2ToContract(assetHash: ByStr20, fromAddress: ByStr20, toAddress: ByStr20, amount: Uint128)
+  msg_to_zrc2 = {_tag: "TransferFrom"; _recipient: assetHash; _amount: uint128_zero; 
+                  from: fromAddress; to: toAddress; amount: amount};
+  msgs = one_msg msg_to_zrc2;
+  send msgs
+end
+
+procedure TransferZRC2ToContract(assetHash: ByStr20, amount: Uint128)
+  transferZRC2ToContract assetHash _sender _this_address amount;
+  e = { _eventname: "TransferToContract"; assetHash: assetHash; amount: amount };
+  event e
+end
+
+procedure TransferZRC2FromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint128)
+  msg_to_zrc2 = {_tag: "Transfer"; _recipient: toAssetHash; _amount: uint128_zero; 
+                 to: address; amount: amount};
+  msgs = one_msg msg_to_zrc2;
+  send msgs
+end
+
+procedure TransferNativeZilTo(addr: ByStr20, amount: Uint128)
+  msg = { _tag : "AddFunds"; _recipient : addr; _amount : amount };
+  msgs = one_msg msg;
+  send msgs;
+  e = { _eventname: "TransferNativeZilTo"; addr: addr; amount: amount };
+  event e
+end
+
+
+(***************************************************)
+(*                  Transition                     *)
+(***************************************************)
+
+(* @dev: Start a proposal for new contract admin. Used by admin only. *)
+(* @param newAdmin: New admin value *)
+transition UpdateAdmin(newAdmin: ByStr20)
+  IsAdmin _sender;
+  staging_admin = Some {ByStr20} newAdmin;
+  stagingcontractadmin := staging_admin
+end
+
+(* @dev: Claim to be the new admin of contract. *)
+transition ClaimAdmin()
+  staging_admin <- stagingcontractadmin;
+  match staging_admin with
+  | Some admin =>
+    is_valid = builtin eq _sender admin;
+    match is_valid with
+    | True =>
+      contractadmin := admin;
+      staging_admin = None {ByStr20};
+      stagingcontractadmin := staging_admin;
+      e = { _eventname: "ClaimAdmin"; new_admin: admin };
+      event e
+    | False =>
+      e = StagingAdminValidationFailed;
+      ThrowError e
+    end
+  | None =>
+    e = StagingAdminNotExist;
+    ThrowError e
+  end
+end
+
+(* @dev: pause the contract. Used by admin only.               *)
+transition Pause()
+  IsAdmin _sender;
+  paused := bool_active
+end
+
+(* @dev: unpause/unfreeze the contract. Used by admin only.    *)
+transition UnPause()
+  IsAdmin _sender;
+  paused := bool_inactive
+end
+
+transition UpdateZRC2TokenContractAddress(addr: ByStr20)
+  IsAdmin _sender;
+  ziladdr := addr
+end
+
+transition SwapZRC2ZILToNativeZIL(amount: Uint128)
+  IsNotPaused;
+  assetHash <- ziladdr;
+  lp <- lockproxy;
+  (* transfer zrc2 zil to this contract*)
+  TransferZRC2ToContract assetHash amount;
+  (* transfer native zil to user *)
+  TransferNativeZilTo _sender amount;
+  (* burn zrc2 zil *)
+  TransferZRC2FromContract assetHash lp amount
+end
+
+transition AddFunds()
+  accept;
+  e = { _eventname : "Funds deposit "; funder : _sender; amount: _amount };
+  event e
+end
+
+transition WithdrawZIL(amount: Uint128)
+  IsPaused;
+  IsAdmin _sender;
+  msg = { _tag : "AddFunds"; _recipient : _sender; _amount : amount };
+  msgs = one_msg msg;
+  send msgs
+end
+
+transition TransferSuccessCallBack(sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition RecipientAcceptTransfer(sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition RecipientAcceptTransferFrom(initiator: ByStr20, sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition TransferFromSuccessCallBack(initiator: ByStr20, sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+
