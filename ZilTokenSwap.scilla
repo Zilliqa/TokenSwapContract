@@ -84,15 +84,11 @@ procedure IsPaused()
   end
 end
 
-procedure transferZRC2ToContract(assetHash: ByStr20, fromAddress: ByStr20, toAddress: ByStr20, amount: Uint128)
-  msg_to_zrc2 = {_tag: "TransferFrom"; _recipient: assetHash; _amount: uint128_zero; 
-                  from: fromAddress; to: toAddress; amount: amount};
-  msgs = one_msg msg_to_zrc2;
-  send msgs
-end
-
 procedure TransferZRC2ToContract(assetHash: ByStr20, amount: Uint128)
-  transferZRC2ToContract assetHash _sender _this_address amount;
+  msg_to_zrc2 = {_tag: "TransferFrom"; _recipient: assetHash; _amount: uint128_zero; 
+                  from: _sender; to: _this_address; amount: amount};
+  msgs = one_msg msg_to_zrc2;
+  send msgs;
   e = { _eventname: "TransferToContract"; assetHash: assetHash; amount: amount };
   event e
 end
