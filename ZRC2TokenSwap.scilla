@@ -164,8 +164,8 @@ transition ExistingZRC2ToBridgedZRC2(amount0: Uint128)
   (* transfer bridged zrc2 to sender*)
   zrc1_l <- zrc1;
   f1 <- factor1;
-  amount1_transfer = builtin mul amount0 f1;
-  amount1_transfer = builtin div amount1_transfer f0;
+  amount1_transfer = builtin div f1 f0;
+  amount1_transfer = builtin mul amount0 amount1_transfer;
   TransferZRC2FromContract zrc1_l _sender amount1_transfer
 end
 
