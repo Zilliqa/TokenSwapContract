@@ -2,7 +2,7 @@ scilla_version 0
 
 import IntUtils
 
-library ZilTokenSwap
+library XcadTokenSwap
 
 let uint128_zero = Uint128 0
 let uint128_ten = Uint128 10
@@ -66,8 +66,11 @@ let muldiv : Uint128 -> Uint128 -> Uint128 -> Uint128 =
         res128
       end
 
-
-contract ZilTokenSwap(
+(* Just for XcadTokenSwap *)
+(* init_decimals_from is 10 ** 6 which is on zilliqa side *)
+(* init_decimals_to is 10 ** 18 which is on ethereum side *)
+(* means bridged token decimals is also 10 ** 18 *)
+contract XcadTokenSwap(
   init_admin: ByStr20,
   init_zrc_from: ByStr20,
   init_decimals_from: Uint32,
