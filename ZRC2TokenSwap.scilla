@@ -106,14 +106,6 @@ procedure TransferZRC2FromContract(toAssetHash: ByStr20, address: ByStr20, amoun
   send msgs
 end
 
-procedure TransferNativeZilTo(addr: ByStr20, amount: Uint128)
-  msg = { _tag : "AddFunds"; _recipient : addr; _amount : amount };
-  msgs = one_msg msg;
-  send msgs;
-  e = { _eventname: "TransferNativeZilTo"; addr: addr; amount: amount };
-  event e
-end
-
 
 (***************************************************)
 (*                  Transition                     *)
