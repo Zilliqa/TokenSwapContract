@@ -1,8 +1,11 @@
 scilla_version 0
 
+import IntUtils
+
 library ZilTokenSwap
 
 let uint128_zero = Uint128 0
+let uint128_ten = Uint128 10
 let bool_active = True
 let bool_inactive = False
 
@@ -31,22 +34,58 @@ let make_error =
     in
     { _exception : "Error"; code : result_code }
 
+let uint128_to_uint256 : Uint128 -> Uint256 =
+  fun (x : Uint128) =>
+    let ox256 = builtin to_uint256 x in
+      match ox256 with
+      | None =>
+        (* this never happens, hence we throw a division by zero exception just in case *)
+        let zero = Uint256 0 in
+        builtin div zero zero
+      | Some x256 => x256
+      end
+
+(* Compute "(x * y) / z" with protection against integer overflows *)
+let muldiv : Uint128 -> Uint128 -> Uint128 -> Uint128 =
+    fun (x : Uint128) =>
+    fun (y : Uint128) =>
+    fun (z : Uint128) =>
+      let x256 = uint128_to_uint256 x in
+      let y256 = uint128_to_uint256 y in
+      let z256 = uint128_to_uint256 z in
+      let x_mul_y256 = builtin mul x256 y256 in
+      let res256 = builtin div x_mul_y256 z256 in
+      let ores128 = builtin to_uint128 res256 in
+      match ores128 with
+      | None =>
+        (* this must never happen, hence we throw an integer overflow exception *)
+        let max_uint128 = Uint128 340282366920938463463374607431768211455 in
+        let fourtytwo128 = Uint128 42 in
+        builtin mul max_uint128 fourtytwo128
+      | Some res128 =>
+        res128
+      end
+
 
 contract ZilTokenSwap(
   init_admin: ByStr20,
-  init_zrc0: ByStr20,
-  init_factor0: Uint128,
-  init_zrc1: ByStr20,
-  init_factor1: Uint128,
-  init_lockproxy: ByStr20
+  init_zrc_from: ByStr20,
+  init_decimals_from: Uint32,
+  init_zrc_to: ByStr20,
+  init_decimals_to: Uint32
 )
+with
+  let ok = uint32_le init_decimals_from init_decimals_to in
+    match ok with
+    | True =>
+      True
+    | False =>
+      False
+    end
+=>
+  
 
 field contractadmin: ByStr20  = init_admin
-field lockproxy: ByStr20 = init_lockproxy
-field zrc0: ByStr20 = init_zrc0
-field factor0: Uint128 = init_factor0
-field zrc1: ByStr20 = init_zrc1
-field factor1: Uint128 = init_factor1
 field stagingcontractadmin: Option ByStr20 = None {ByStr20}
 field paused: Bool = True
 
@@ -155,18 +194,16 @@ transition UnPause()
 end
 
 (* @param amount0: ExistingZRC2 *)
-transition ExistingZRC2ToBridgedZRC2(amount0: Uint128)
+transition ExistingZRC2ToBridgedZRC2(amount_from: Uint128)
   IsNotPaused;
   (* transfer existing zrc2 to this contract*)
-  zrc0_l <- zrc0;
-  f0 <- factor0;
-  TransferZRC2ToContract zrc0_l amount0;
+  TransferZRC2ToContract init_zrc_from amount_from;
   (* transfer bridged zrc2 to sender*)
-  zrc1_l <- zrc1;
-  f1 <- factor1;
-  amount1_transfer = builtin div f1 f0;
-  amount1_transfer = builtin mul amount0 amount1_transfer;
-  TransferZRC2FromContract zrc1_l _sender amount1_transfer
+  (* amount_from / factor_from * factor_to *)
+  factor_from = builtin pow uint128_ten init_decimals_from;
+  factor_to = builtin pow uint128_ten init_decimals_to;
+  to_amount = muldiv amount_from factor_to factor_from;
+  TransferZRC2FromContract init_zrc_to _sender to_amount
 end
 
 transition TransferSuccessCallBack(sender: ByStr20, recipient: ByStr20, amount: Uint128)
