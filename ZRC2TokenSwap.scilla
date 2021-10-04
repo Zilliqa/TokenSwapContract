@@ -35,18 +35,18 @@ let make_error =
 contract ZilTokenSwap(
   init_admin: ByStr20,
   init_zrc0: ByStr20,
-  init_decimals0: Uint128,
+  init_factor0: Uint128,
   init_zrc1: ByStr20,
-  init_decimals1: Uint128,
+  init_factor1: Uint128,
   init_lockproxy: ByStr20
 )
 
 field contractadmin: ByStr20  = init_admin
 field lockproxy: ByStr20 = init_lockproxy
 field zrc0: ByStr20 = init_zrc0
-field decimals0: Uint128 = init_decimals0
+field factor0: Uint128 = init_factor0
 field zrc1: ByStr20 = init_zrc1
-field decimals1: Uint128 = init_decimals1
+field factor1: Uint128 = init_factor1
 field stagingcontractadmin: Option ByStr20 = None {ByStr20}
 field paused: Bool = True
 
@@ -157,16 +157,15 @@ end
 (* @param amount0: ExistingZRC2 *)
 transition ExistingZRC2ToBridgedZRC2(amount0: Uint128)
   IsNotPaused;
-  lp <- lockproxy;
   (* transfer existing zrc2 to this contract*)
   zrc0_l <- zrc0;
-  d0 <- decimals0;
-  amount0_transfer = builtin mul amount0 d0;
-  TransferZRC2ToContract zrc0_l amount0_transfer;
+  f0 <- factor0;
+  TransferZRC2ToContract zrc0_l amount0;
   (* transfer bridged zrc2 to sender*)
   zrc1_l <- zrc1;
-  d1 <- decimals1;
-  amount1_transfer = builtin mul amount0 d1;
+  f1 <- factor1;
+  amount1_transfer = builtin mul amount0 f1;
+  amount1_transfer = builtin div amount1_transfer f0;
   TransferZRC2FromContract zrc1_l _sender amount1_transfer
 end
 
