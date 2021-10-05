@@ -158,16 +158,18 @@ transition UnPause()
   paused := bool_inactive
 end
 
-(* @param amount0: ExistingZRC2 *)
+(* @param amount_from: Amount to be swapped *)
 transition ExistingZRC2ToBridgedZRC2(amount_from: Uint128)
   IsNotPaused;
   (* transfer existing zrc2 to this contract*)
   TransferZRC2ToContract init_zrc_from amount_from;
-  (* transfer bridged zrc2 to sender*)
-  (* amount_from / factor_from * factor_to *)
+
+  (* Compute to_amount = amount_from*10^(init_decimals_to - init_decimals_from) *)
   to_amount = let diff = builtin sub init_decimals_to init_decimals_from 
       in let multiplier = builtin pow uint128_ten diff
       in builtin mul amount_from multiplier;
+
+  (* transfer bridged zrc2 to sender*)
   TransferZRC2FromContract init_zrc_to _sender to_amount
 end
 
