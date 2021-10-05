@@ -80,6 +80,8 @@ type CalleeTransaction =
 | ClaimAdmin
 (* WithdrawZIL(amount: Uint128) *)
 | WithdrawZIL of Uint128
+(* ChangeLockProxy(addr: ByStr20) *)
+| ChangeLockProxy of ByStr20
 
 (* Type of (outstanding) transactions *)
 type Transaction =
@@ -154,6 +156,12 @@ let custom_transaction_msg_as_list =
          _tag: "WithdrawZIL";
          _amount: Uint128 0;
          amount: amount}
+        (* ChangeLockProxy(addr: ByStr20) *)
+      | ChangeLockProxy addr =>
+        {_recipient: calleeContract;
+         _tag: "ChangeLockProxy";
+         _amount: Uint128 0;
+         addr: addr}
       end
     in
     one_msg msg
@@ -381,6 +389,12 @@ end
 (* Submit a new Withdraw transaction for future signoff *)
 transition SubmitCustomWithdrawZILTransaction(calleeContract: ByStr20, amount: Uint128)
   transaction = WithdrawZIL amount;
+  SubmitCustomTransaction calleeContract transaction
+end
+
+(* Submit a new ChangeLockProxy transaction for future signoff *)
+transition SubmitCustomChangeLockProxyTransaction(calleeContract: ByStr20, addr: ByStr20)
+  transaction = ChangeLockProxy addr;
   SubmitCustomTransaction calleeContract transaction
 end
 
