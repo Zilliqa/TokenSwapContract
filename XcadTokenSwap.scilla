@@ -169,8 +169,18 @@ transition ExistingZRC2ToBridgedZRC2(amount_from: Uint128)
       in let multiplier = builtin pow uint128_ten diff
       in builtin mul amount_from multiplier;
 
-  (* transfer bridged zrc2 to sender*)
+  (* transfer bridged zrc2 to sender *)
   TransferZRC2FromContract init_zrc_to _sender to_amount
+end
+
+transition WithdrawZRC2(token: ByStr20, amount: Uint128)
+  IsAdmin _sender;
+  msg_to_token = {
+    _tag : "Transfer"; _recipient : token; _amount : uint128_zero;
+    to : _sender; amount : amount
+  };
+  msgs = one_msg msg_to_token;
+  send msgs
 end
 
 transition TransferSuccessCallBack(sender: ByStr20, recipient: ByStr20, amount: Uint128)
