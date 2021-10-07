@@ -31,7 +31,7 @@ async function main() {
                 {
                     vname: 'amount_from',
                     type: 'Uint128',
-                    value: "1"
+                    value: "1000000"
                 },
             ],
             {
