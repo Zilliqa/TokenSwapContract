@@ -61,6 +61,10 @@ interface IERC20 {
      */
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
+    function burnFrom(address from, uint256 amount) external returns (bool);
+
+    function burn(uint256 amount) external returns (bool);
+
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
      * another (`to`).

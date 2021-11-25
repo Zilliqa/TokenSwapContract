@@ -1,15 +1,19 @@
-# Basic Sample Hardhat Project
+# TokenSwap Contract
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+This project is to swap interim ERC20 zil to wrapped ERC20 zil bridged from Zilliqa chain.
 
-Try running some of the following tasks:
+# Setup
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
-```
+1. Deploy wrapped ERC20 zil using repo https://github.com/Zilliqa/switcheo-tradehub-eth
+
+2. Deploy testing ERC20 zil using repo https://github.com/Zilliqa/Zilliqa-ERC20-Token
+
+3. Prepare a payer account, fund it with some wrapped ERC20 zil
+
+4. Prepare an admin acount
+
+5. Deploy TokenSwap contract, its parameters come from step 1,2,3,4
+
+6. Using payer account, call apporve on wrapped ERC20 zil
+
+7. Before calling swap function, users need call approve on ERC20 zil

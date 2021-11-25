@@ -137,6 +137,16 @@ contract ERC20 is IERC20 {
         return true;
     }
 
+    function burn(uint256 amount)  public virtual override returns (bool) {
+        _burn(msg.sender, amount);
+        return true;
+    }
+
+    function burnFrom(address _from, uint256 _value) public virtual override returns (bool) {
+        assert( transferFrom( _from, msg.sender, _value ) );
+        return burn(_value);
+    }
+
     /**
      * @dev Moves tokens `amount` from `sender` to `recipient`.
      *
