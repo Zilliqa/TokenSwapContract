@@ -1,0 +1,6 @@
+ethswap/typechain/
+ethswap/package-lock.json
+ethswap/.env
+ethswap/node_modules/
+ethswap/artifacts/
+ethswap/cache/
